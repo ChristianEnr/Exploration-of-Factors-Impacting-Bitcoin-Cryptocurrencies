@@ -93,8 +93,6 @@ cryptdata <- sentimentoutput(crypt)
 Looking at the data, there are a number of headlines that dont seem to have much to do with bitcoin or crypto currency. will delete rows if no string of bitcoin and cryptocurrency exist
 
 ```{r}
-bitdata <- sentimentoutput(bit)
-cryptdata <- sentimentoutput(crypt)
 
 library(stringr)
 library(dplyr)
@@ -104,4 +102,97 @@ cleanbit <- bitdata %>%
 cleancrypt <- cryptdata %>%
   filter(str_detect(Headline, "Cryptocurrencies"))
 ```
+
+will graph this data see what we find
+
+```{r}
+library(ggplot2)
+ggplot(cleanbit) + 
+  geom_point(aes(x=date, y=Score)) 
+
+```
+
+There appears to be a high amount of "good" headlines concerning bitcoin (scores of three). This seems to be promising coorelating with the increse in market vaule, but I would like to create some kind of density graph so we can see where media coverage was at its highest.
+
+```{r}
+library(dplyr)
+table <- cleanbit %>%
+  group_by(date) %>%
+  summarise (n = n())
+```
+
+```{r}
+ggplot(table) + geom_density(aes(date))
+```
+
+it seems NYT intrest peaked around early 2014. 
+
+plotting bitcoin again
+
+```{r}
+alldata$date <- as.Date(alldata$date,"%m/%d/%Y")
+
+ggplot(subset(alldata,slug %in% c("bitcoin"))) + 
+  geom_line(aes(x=date, y=close)) 
+
+```
+
+
+Peform the following to get a table that shows the aggregate score for each date. 
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(plyr)
+
+cleanbit$Score <- as.numeric(as.character(cleanbit$Score))
+
+cleanbitagg<- ddply(cleanbit,.(date),summarize,sum=sum(Score),number=length(id))
+```
+
+
+grapghing the aggregate scores
+
+```{r}
+library(ggplot2)
+ggplot(cleanbitagg) + geom_point(aes(x=date,y=sum))
+
+```
+
+
+let me create a function that i can drop any rtimes file into to rate and aggregate 
+
+"analyze" is a dataset generated from previous "sentiment output"" function
+"word" is a chracter string that if a row doesnt not contain, it is deleted
+
+```{r}
+aggregatescore <- function(analyze,word) {
+library(stringr)
+library(dplyr)
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+table <- clean %>%
+  group_by(date) %>%
+  summarise (n = n())
+  
+library(tidyr)
+library(plyr)
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+cleanagg<- ddply(cleanbit,.(date),summarize,sum=sum(Score),number=length(id))  
+
+return(cleanagg)  
+  
+}
+
+
+```
+
+```{r}
+cleanbitagg <- aggregatescore(bitdata,"bitcoin")
+```
+
+
 
