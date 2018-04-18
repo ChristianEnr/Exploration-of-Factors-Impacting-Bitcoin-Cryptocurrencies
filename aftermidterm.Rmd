@@ -37,7 +37,7 @@ created function to generate dataframes of sentiment analysis with diffrent dict
 where 
 "dataNYT" is a dataframe generated from rtimes. 
 
-```{r}
+```{r, eval=FALSE}
 sentimentoutput <- function(dataNYT)  {
   
 library(rvest)
@@ -83,7 +83,7 @@ return(analysis)
 Have a score in this set, to factor in responses from all dictionaries 
 
 
-```{r}
+```{r , eval=FALSE}
 bitdata <- sentimentoutput(bit)
 
 cryptdata <- sentimentoutput(crypt)
@@ -92,7 +92,7 @@ cryptdata <- sentimentoutput(crypt)
 
 Looking at the data, there are a number of headlines that dont seem to have much to do with bitcoin or crypto currency. will delete rows if no string of bitcoin and cryptocurrency exist
 
-```{r}
+```{r , eval=FALSE}
 
 library(stringr)
 library(dplyr)
@@ -105,7 +105,7 @@ cleancrypt <- cryptdata %>%
 
 will graph this data see what we find
 
-```{r}
+```{r , eval=FALSE}
 library(ggplot2)
 ggplot(cleanbit) + 
   geom_point(aes(x=date, y=Score)) 
@@ -114,14 +114,14 @@ ggplot(cleanbit) +
 
 There appears to be a high amount of "good" headlines concerning bitcoin (scores of three). This seems to be promising coorelating with the increse in market vaule, but I would like to create some kind of density graph so we can see where media coverage was at its highest.
 
-```{r}
+```{r , eval=FALSE}
 library(dplyr)
 table <- cleanbit %>%
   group_by(date) %>%
   summarise (n = n())
 ```
 
-```{r}
+```{r , eval=FALSE}
 ggplot(table) + geom_density(aes(date))
 ```
 
@@ -129,7 +129,7 @@ it seems NYT intrest peaked around early 2014.
 
 plotting bitcoin again
 
-```{r}
+```{r , eval=FALSE}
 alldata$date <- as.Date(alldata$date,"%m/%d/%Y")
 
 ggplot(subset(alldata,slug %in% c("bitcoin"))) + 
@@ -137,26 +137,31 @@ ggplot(subset(alldata,slug %in% c("bitcoin"))) +
 
 ```
 
-
-Peform the following to get a table that shows the aggregate score for each date. 
+function to create news frequency table
 
 ```{r}
-library(tidyr)
+freqnews <- function(analyze, word) {
+library(stringr)
 library(dplyr)
-library(plyr)
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
 
-cleanbit$Score <- as.numeric(as.character(cleanbit$Score))
+table <- clean %>%
+  group_by(date) %>%
+  summarise (n = n())
 
-cleanbitagg<- ddply(cleanbit,.(date),summarize,sum=sum(Score),number=length(id))
+
+return(table)
+
+}
 ```
 
+```{r, eval=FALSE}
+table <- freqnews(bitdata,"Bitcoin")
 
-grapghing the aggregate scores
 
-```{r}
-library(ggplot2)
-ggplot(cleanbitagg) + geom_point(aes(x=date,y=sum))
-
+ggplot(table) + 
+  geom_line(aes(x=date, y=n)) 
 ```
 
 
@@ -175,24 +180,187 @@ clean <- analyze %>%
 table <- clean %>%
   group_by(date) %>%
   summarise (n = n())
-  
-library(tidyr)
-library(plyr)
+
 
 clean$Score <- as.numeric(as.character(clean$Score))
 
-cleanagg<- ddply(cleanbit,.(date),summarize,sum=sum(Score),number=length(id))  
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
 
-return(cleanagg)  
+return(sums)  
   
 }
 
 
 ```
 
-```{r}
-cleanbitagg <- aggregatescore(bitdata,"bitcoin")
+```{r, eval=FALSE}
+cleanbitagg <- aggregatescore(bitdata,"Bitcoin")
+
 ```
+
+When we plot with a dataset cleaned for the chracter string bitcoin in the headlines we find that most coverage is postive when we add the score for each date. 
+
+
+```{r, eval=FALSE}
+library(ggplot2)
+ggplot(cleanbitagg) + geom_point(aes(x=date,y=sum, colour = sum <0)) +
+  scale_colour_manual(name = 'Sum < 0', values = setNames(c('red','green'),c(T, F))) +
+  xlab('date') + ylab('score of date')
+```
+
+let me pull the dates of that have a score larger than 5, and see what they have in common
+
+```{r}
+
+topheadline <- function(analyze,word, x) {
+library(stringr)
+library(dplyr)
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+table <- clean %>%
+  group_by(date) %>%
+  summarise (n = n())
+
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
+
+  
+dates <- subset(sums, x, 
+select=c(date))  
+
+complete <- merge(dates,clean,by = "date")
+
+return(complete)
+
+}
+
+```
+
+```{r, eval=FALSE}
+topheadline<- topheadline(bitdata,"Bitcoin",5)
+```
+
+When using the above function to isolate headlines form days with a high news score I find reundent headlines. This can affect the score and make my results less meaningful. Will creat function to eleminate duplicates and hopefully near duplicates. 
+
+
+I will modify my sentimentoutput function 
+
+```{r}
+sentimentoutput <- function(dataNYT)  {
+  
+library(rvest)
+library(SentimentAnalysis)
+library(stringr)
+library(dplyr)
+library(tm)
+
+data <-  dataNYT$data   
+
+headlines <- data$headline.main
+
+headlinecorpus <- Corpus(VectorSource(headlines))
+
+headlineclean <- tm_cleaner(headlinecorpus)
+
+sentimentnum <- analyzeSentiment(headlineclean)
+
+GI <-convertToBinaryResponse(sentimentnum$SentimentGI)
+LM <-convertToBinaryResponse(sentimentnum$SentimentLM)
+QDAP <-convertToBinaryResponse(sentimentnum$SentimentQDAP)
+
+headlineoriginal <- factor(data$headline.main)
+
+GI_num <- ifelse(GI =="positive",1,-1) 
+LM_num <- ifelse(LM =="positive",1,-1) 
+QDAP_num <- ifelse(QDAP =="positive",1,-1) 
+
+analysis <- data.frame(Score=factor(GI_num + LM_num + QDAP_num),
+  GI=factor(GI),
+  LM=factor(LM),
+  QDAP=factor(QDAP),
+  Headline=factor(data$headline.main),
+  date=as.Date(data$pub_date),
+  stringsAsFactors=FALSE)
+
+analysis2 <- unique(analysis)
+
+return(analysis2)
+
+}
+```
+test 
+
+```{r, eval=FALSE}
+bitdata <- sentimentoutput(bit)
+```
+
+1154 to 1145, the outliers may have been just duplicates.
+
+
+Let me summerize work flow at this point
+
+1. genreate dataset from rtimes
+
+2. drop dataset into "sentimentoutput" function to rate each headline. Generates table with score,GI,LM,QDAP rating,headline,date. Score is an aggregate sum where each rating is either 1=postive or -1 negative.  
+
+Sentimentoutput <- function(dataNYT)
+
+dataNYT-dataset genreated from scrapping with rtimes package
+
+--------------------------------------------
+From there we can use the following functions: freqnews,aggregatescore, or topheadline.
+---------------------------------------------
+
+aggregatescore - genreates table with date and score. Score is sum of headline news scores. 
+
+aggregatescore <- function(analyze,word)
+
+analyze-dataset generated from sentimentoutput
+
+word-chracter string filter (i.e. "bitcoin")
+
+---------------------------------------------
+
+freqnews - generates table with date and number of headlines.
+
+freqnews <- function(analyze, word)
+
+analyze-dataset generated from sentimentoutput
+
+word-chracter string filter (i.e. "bitcoin")
+
+---------------------------------------------
+
+topheadline - filters table to include headlines from dates with that have a score within a specified range
+
+topheadline <- function(analyze,word, x)
+
+analyze-dataset generated from sentimentoutput
+
+word-chracter string filter (i.e. "bitcoin")
+
+x-specifed range (i.e. x > sum )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
