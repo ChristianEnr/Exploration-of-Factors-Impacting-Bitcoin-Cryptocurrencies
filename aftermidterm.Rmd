@@ -214,7 +214,7 @@ let me pull the dates of that have a score larger than 5, and see what they have
 
 ```{r}
 
-topheadline <- function(analyze,word, x) {
+topheadline <- function(analyze,word, condition) {
 library(stringr)
 library(dplyr)
 clean <- analyze %>%
@@ -232,7 +232,7 @@ sums <- clean %>%
            summarise(sum = sum(Score))
 
   
-dates <- subset(sums, x, 
+dates <- subset(sums, eval(parse(text=condition)), 
 select=c(date))  
 
 complete <- merge(dates,clean,by = "date")
@@ -244,7 +244,7 @@ return(complete)
 ```
 
 ```{r, eval=FALSE}
-topheadline<- topheadline(bitdata,"Bitcoin",5)
+topheadline<- topheadline(bitdata,"Bitcoin","sum > 0")
 ```
 
 When using the above function to isolate headlines form days with a high news score I find reundent headlines. This can affect the score and make my results less meaningful. Will creat function to eleminate duplicates and hopefully near duplicates. 
@@ -346,15 +346,67 @@ analyze-dataset generated from sentimentoutput
 
 word-chracter string filter (i.e. "bitcoin")
 
-x-specifed range (i.e. x > sum )
+condition-specifed range (i.e. "10 > sum" )
 
 
+--------------------------------------------
+
+wordc-generates wordcloud, from rtimes dataset 
+wordc <- function(analyze,word,condition,y)
+
+analyze-dataset generated from sentimentoutput
+
+word-chracter string filter (i.e. "bitcoin")
+
+condition-specifed range (i.e. "10 > sum" )
+
+y - max words (i.e. 10)
+
+-------------------------------------------
+Lets create a word cloud of the top headlines based on the topheadline function.
 
 
+```{r}
+wordc <- function(analyze,word,condition,y) {
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(stringr)
+library(dplyr)
+library(SnowballC)
+
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
+
+  
+dates <- subset(sums,eval(parse(text=condition)), 
+select=c(date))  
+
+complete <- merge(dates,clean,by = "date")
+
+Corpus <- Corpus(VectorSource(complete$Headline))
 
 
+wordcloud(Corpus, max.words = y, random.order = FALSE)
+
+}
+
+```
+
+```{r}
+wordc(bitdata,"Bitcoin","sum > 5",100)
+```
 
 
+```{r}
+wordc(bitdata,"Bitcoin", condition="sum > 5",50)
+```
 
 
 
