@@ -122,7 +122,7 @@ table <- cleanbit %>%
 ```
 
 ```{r , eval=FALSE}
-ggplot(table) + geom_density(aes(date))
+ggplot(table) + geom_density(aes(date,fill="red")) + ggtitle("NYT Interest in Bitcoin", subtitle = "Smoothed")
 ```
 
 it seems NYT intrest peaked around early 2014. 
@@ -400,7 +400,7 @@ wordcloud(Corpus, max.words = y, random.order = FALSE)
 ```
 
 ```{r}
-wordc(bitdata,"Bitcoin","sum > 5",100)
+wordc(bitdata,"Bitcoin","sum > 3",100)
 ```
 
 
@@ -436,9 +436,8 @@ wordcloud(Corpus, max.words = y, random.order = FALSE)
 ```
 
 ```{r}
-wordcnofilter(bitdata,"sum > 5",100)
+wordcnofilter(bitdata,"sum > 0",100)
 
-wordcnofilter(cryptdata,"sum >5",100)
 ```
 
 Unfortenetly, our headlines really don't tell much, even when we peform a string detect to try to get rid of headlines that likely have nothing to do with cryptocurrency.
@@ -557,8 +556,23 @@ It may be possible to caulcate variance amoung the dictionary ratings, and drop 
 
 bitdata2$var <- 0.5* ((((bitdata2$GI)-(bitdata2$Score/3))^2) + (((bitdata2$LM)-(bitdata2$Score/3))^2) + (((bitdata2$QDAP)-(bitdata2$Score/3))^2))
 
-View(var)
 ```
+
+
+```{r}
+bitdata3filter <- bitdata2 %>%
+  filter(str_detect(Headline, "Bitcoin"))
+
+bitdata3 <- filter(bitdata3filter, var < 0.01 )
+
+```
+
+accounting varience, how do word clouds change?
+
+```{r}
+wordcnofilter(bitdata3,"sum < 0",100)
+```
+
 
 ------------------------------------------------
 
