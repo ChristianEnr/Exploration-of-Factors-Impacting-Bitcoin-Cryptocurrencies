@@ -1,0 +1,71 @@
+---
+title: "Intro"
+output: html_document
+---
+
+The bulk of my data was derived from the CryptoR package. 
+
+Documentation avalible at https://cran.r-project.org/web/packages/crypto/index.html
+
+```{r, eval=FALSE}
+library(crypto)
+
+will_i_get_rich <- getCoins()
+
+# Retrieve crypto market history for specific coin
+will_i_get_rich_from <- getCoins("kin")
+
+# Get list of coins and rank
+rich_list <- listCoins()
+```
+
+In order to verify the validity/consistency of the data, I will compare the the bitcoin vaule retrived from the CryptoR package with that that was collected from the following. Downloads are available at the supplied URLS.
+
+Blockchain.info
+https://blockchain.info/charts/market-price?timespan=all
+
+```{r, eval=FALSE}
+library(readr)
+BTC_block <- read_csv("~/software/market-price (1).csv")
+```
+
+Coindesk
+https://www.coindesk.com/price/
+
+```{r, eval=FALSE}
+library(readr)
+BTC_coindesk <- read_csv("~/software/coindesk-bpi-USD-close_data-2010-07-17_2018-04-23.csv")
+```
+
+
+With an eyeball comparison to make sure the data checks out we proceed with most of our work concerning the dataset generated from the crypto package.  
+
+
+I decide that I would focus on the top 15 cryptocurrencies. This top 15 ranking is determined by a varible generated in cryptoR called ranknow. This ranking was scrapped from CoinMarketCoin.Com and is an indictor of Market Cap.
+
+```{r}
+str(will_i_get_rich)
+```
+
+
+```{r}
+library(dplyr)
+
+will_i_get_rich %>% select(name,ranknow) %>% filter (ranknow < 16) %>% distinct(name,ranknow)
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+will_i_get_rich$date <- as.Date(will_i_get_rich$date)
+
+data<- subset(will_i_get_rich, will_i_get_rich$date >= "2014-01-01")
+
+data <- subset(data,data$ranknow < 16)
+```
+
+
+
