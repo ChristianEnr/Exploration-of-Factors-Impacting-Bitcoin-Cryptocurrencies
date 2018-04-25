@@ -40,14 +40,21 @@ BTC_coindesk <- read_csv("~/software/coindesk-bpi-USD-close_data-2010-07-17_2018
 
 With an eyeball comparison to make sure the data checks out we proceed with most of our work concerning the dataset generated from the crypto package.  
 
+```{r}
+str(will_i_get_rich)
+
+```
 
 I decide that I would focus on the top 15 cryptocurrencies. This top 15 ranking is determined by a varible generated in cryptoR called ranknow. This ranking was scrapped from CoinMarketCoin.Com and is an indictor of Market Cap.
 
+
+Range of Cryptocurrencies, also telling us the amount of cryptocurrencies in the dataset. 
 ```{r}
-str(will_i_get_rich)
+range(will_i_get_rich$ranknow)
 ```
 
 
+Names of the Top 15 Cryptocurrencies
 ```{r}
 library(dplyr)
 
@@ -55,6 +62,7 @@ will_i_get_rich %>% select(name,ranknow) %>% filter (ranknow < 16) %>% distinct(
 
 ```
 
+I decided to partition the data based on the top 15 Cryptocurrencies and all after 2014. 
 
 ```{r}
 library(ggplot2)
@@ -66,6 +74,48 @@ data<- subset(will_i_get_rich, will_i_get_rich$date >= "2014-01-01")
 
 data <- subset(data,data$ranknow < 16)
 ```
+
+This partitioned dataset will be known as "data"
+
+```{r}
+str(data)
+```
+
+Plot of entire dataset
+
+```{r}
+library(ggplot2)
+
+ggplot(data) + 
+  geom_line(aes(x=date, y=close,colour = name)) + ggtitle("Closing Price of Top 15 Cryptocurrencies", subtitle = "USD")
+
+```
+
+
+Graph of Market Closing Vaule in USD for the dominating outlier (Bitcoin)
+
+```{r}
+ggplot(subset(data,ranknow == 1)) + 
+  geom_line(aes(x=date, y=close, colour = name)) 
+```
+
+
+Graph of Market Closing Vaule in USD for Top 15 Cryptocurrencies minus bitcoin 
+
+```{r}
+ggplot(subset(data,ranknow > 1)) + 
+  geom_line(aes(x=date, y=close, colour = name)) 
+```
+
+
+Graph Market Closing Vaule in USD of 6-15 Top Cryptocurrencies
+
+```{r}
+ggplot(subset(data,ranknow > 5)) + 
+  geom_line(aes(x=date, y=close, colour = name))
+```
+
+
 
 
 

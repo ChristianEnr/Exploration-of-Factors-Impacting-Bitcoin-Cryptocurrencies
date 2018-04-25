@@ -1,0 +1,90 @@
+---
+title: "LanguageProcessing"
+output: html_document
+---
+
+Having looked at the data, I was motivated to look for particular news events that may have defined cryptocurrency affected it's market value and reach some insight into what causes cryptocurrency to fluctuate. The first step of this process was to take advantage of Rtimes package.
+
+Rtimes package is a package that acts as an interface between R and the New York Times API
+Documentation available at https://cran.r-project.org/web/packages/rtimes/index.html
+
+
+```{r, eval=FALSE}
+Sys.setenv(NYTIMES_AS_KEY = "b4969dfbe67548568bf022335e4bd5fb")
+```
+
+
+I first used the API to generate all headlines with the keyword "bitcoin" from January of 2010-April of 2018. 
+
+```{r}
+bit <- as_search(q="bitcoin", begin_date = "20100101", end_date = '20180401', all_results = TRUE)  
+```
+
+
+I first used the API to generate all headlines with the keyword "cryptocurrency" from January of 2010-April of 2018. 
+
+```{r}
+crypt <- as_search(q="cryptocurrency", begin_date = "20100101", end_date = '20180401', all_results = TRUE) 
+```
+
+
+As these datasets are generated, we find that the observations generated from the "bitcoin" query are much larger in number than the "cryptocurrency" query.
+
+```{r}
+nrow(bit$data)
+nrow(crypt$data)
+```
+
+
+I am motivated at this point to take the headlines that have been retrieved from the package and use language processing tools to plot rating against market vaule and see if there are any observable trends. 
+
+
+First I will define some functions that will help in the process.
+
+
+
+```{r}
+tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
+  # Cleans a corpus object of spaces,numbers,case,stop words, and punctuation
+  # Args:
+  #
+  #
+  #
+  #
+  require(tm)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, stop)
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(function(x) gsub("http\\w+", "", x)))
+  return(corpus)
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
