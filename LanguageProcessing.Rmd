@@ -47,9 +47,12 @@ First I will define some functions that will help in the process.
 tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
   # Cleans a corpus object of spaces,numbers,case,stop words, and punctuation
   # Args:
+  # Corpus: Object to be cleaned
+  # stop=stopwords(""): define dictionary from which corrsponding stopwords will be pulled
+  # rm_num: True or False argument
   #
-  #
-  #
+  #Returns: 
+  #Cleaned corpus object where number of rows is equal to input cprpus object.
   #
   require(tm)
   corpus <- tm_map(corpus, stripWhitespace)
@@ -62,27 +65,140 @@ tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
 }
 ```
 
+I developed the following function to easily replicate the sentiment analysis process.
+
+```{r, eval=FALSE}
+sentimentoutputbi <- function(dataNYT)  {
+#Generates data frame of NYT headlines and binary sentiment analysis results (positive/negative) from the following dictionaries: General Inquirer(Harvard-IV), Loughran-McDonald financial dictionary, and QDAP (polarity words from qdap package).   
+
+#Also adds a variable called "score" where the results of the dictionaries are converted to a numeric factor (1="positive" or -1="negative") and added together to form an aggregate score
+  
+#Arg:
+#dataNYT- dataframe genreated from scrapping with rtimes package 
+
+#Return
+#analysis- dataframe with Score(Factor),GI(Factor),LM(Factor),QDAP(Factor),Headline(Factor),Date(Date)    
+      
+library(rvest)
+library(SentimentAnalysis)
+library(stringr)
+library(dplyr)
+library(tm)
+
+data <-  dataNYT$data   
+  
+headlines <- data$headline.main
+
+headlinecorpus <- Corpus(VectorSource(headlines))
+
+headlineclean <- tm_cleaner(headlinecorpus)
+
+sentimentnum <- analyzeSentiment(headlineclean)
+
+GI <-convertToBinaryResponse(sentimentnum$SentimentGI)
+LM <-convertToBinaryResponse(sentimentnum$SentimentLM)
+QDAP <-convertToBinaryResponse(sentimentnum$SentimentQDAP)
+
+headlineoriginal <- factor(data$headline.main)
+
+GI_num <- ifelse(GI =="positive",1,-1) 
+LM_num <- ifelse(LM =="positive",1,-1) 
+QDAP_num <- ifelse(QDAP =="positive",1,-1) 
+
+analysis <- data.frame(Score=factor(GI_num + LM_num + QDAP_num),
+  GI=factor(GI),
+  LM=factor(LM),
+  QDAP=factor(QDAP),
+  Headline=factor(data$headline.main),
+  date=as.Date(data$pub_date),
+  stringsAsFactors=FALSE)
+
+return(analysis)
+
+}
+
+```
+
+
+Taking the dataframes generated from query to the Rtimes package and run them through the sentiment analysis function that I just defined.
+
+```{r , eval=FALSE}
+bitdata <- sentimentoutputbi(bit)
+
+cryptdata <- sentimentoutputbi(crypt)
+
+```
+
+
+Looking at the data, there are a number of headlines that don't seem to have much to do with bitcoin or crypto currency. I will delete rows if no string containing "bitcoin" or "cryptocurrency" exist.
+
+```{r}
+View(bitdata)
+View(cryptdata)
+```
+
+
+```{r , eval=FALSE}
+
+library(stringr)
+library(dplyr)
+cleanbit <- bitdata %>%
+  filter(str_detect(Headline, "Bitcoin"))
+
+cleancrypt <- cryptdata %>%
+  filter(str_detect(Headline, "Cryptocurrencies"))
+```
+
+Graph of Cleanbit (Score of Dataset that concerns headlines that mention bitcoin)
+
+```{r , eval=FALSE}
+library(ggplot2)
+ggplot(cleanbit) + 
+  geom_point(aes(x=date, y=Score)) 
+```
+Graph of Cleancrypt (Score of Dataset that concerns headlines that mention bitcoin)
+
+```{r , eval=FALSE}
+library(ggplot2)
+ggplot(cleancrypt) + 
+  geom_point(aes(x=date, y=Score))
+```
+
+There appears to be a high amount of "good" headlines concerning bitcoin (scores of three). This seems to be promising coorelating with the increse in market vaule, but I would like to create some kind of density graph so we can see where media coverage was at its highest.
+
+```{r , eval=FALSE}
+library(dplyr)
+table <- cleanbit %>%
+  group_by(date) %>%
+  summarise (n = n())
+```
+
+
+Looking at the result, it appears that media intrest from the NYT in Bitcoi, peaked in 2014. 
+
+```{r , eval=FALSE}
+ggplot(table) + geom_density(aes(date,fill="red")) + ggtitle("NYT Interest in Bitcoin", subtitle = "Smoothed")
+```
 
 
 
 
+```{r}
+freqnews <- function(analyze, word) {
+library(stringr)
+library(dplyr)
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+table <- clean %>%
+  group_by(date) %>%
+  summarise (n = n())
 
 
+return(table)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
+```
 
 
 
