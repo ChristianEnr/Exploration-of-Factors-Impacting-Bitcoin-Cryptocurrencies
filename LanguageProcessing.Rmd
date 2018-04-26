@@ -166,6 +166,10 @@ ggplot(cleancrypt) +
 
 There appears to be a high amount of "good" headlines concerning bitcoin (scores of three). This seems to be promising coorelating with the increse in market vaule, but I would like to create some kind of density graph so we can see where media coverage was at its highest.
 
+When I filter headlines in the crypto dataset, based on the presence of the character string "Cryptocurrency"", we find only two points. Therefore, I will focus my work with the Rtimes package on the headlines concerning bitcoin.
+
+Given how well known bitcoin is, I felt safe to proceed this way as "bitcoin" is often discussed as a proxy for cryptocurrencies in general.
+
 ```{r , eval=FALSE}
 library(dplyr)
 table <- cleanbit %>%
@@ -174,17 +178,23 @@ table <- cleanbit %>%
 ```
 
 
-Looking at the result, it appears that media intrest from the NYT in Bitcoi, peaked in 2014. 
+Looking at the result, it appears that media intrest from the NYT in Bitcoin, peaked in 2014. This doesnt follow bitcoin prices closely, given the spike in 2017 of not just bitcoin but of other cryptocurrencies as well. 
 
 ```{r , eval=FALSE}
 ggplot(table) + geom_density(aes(date,fill="red")) + ggtitle("NYT Interest in Bitcoin", subtitle = "Smoothed")
 ```
 
 
-
-
 ```{r}
 freqnews <- function(analyze, word) {
+#Function to count number of headlines a day and filter headlines by character string  
+#Args:
+#analyze -  dataframe with Score(Factor),GI(Factor),LM(Factor),QDAP(Factor),Headline(Factor),Date(Date) [Output from Previously Defined SentimentAnalysis function]
+#Word - Character string to filter headlines by  
+#Returns:
+#freq - Dataframe with Date and N-Number of news articles that share date     
+  
+    
 library(stringr)
 library(dplyr)
 clean <- analyze %>%
@@ -195,10 +205,120 @@ table <- clean %>%
   summarise (n = n())
 
 
-return(table)
+return(freq)
 
 }
 ```
+
+
+```{r}
+aggregatescore <- function(analyze,word) {
+#Function to aggregate the scores of all headlines from a particular date into one aggregate score per date
+  
+#Args:  
+#analyze -  dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
+#Word - Character string to filter headlines by   
+#Returns:  
+#sums - dataframe with Date and Corresponding Aggregate Score (sum).  
+    
+library(stringr)
+library(dplyr)
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+table <- clean %>%
+  group_by(date) %>%
+  summarise (n = n())
+
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
+
+return(sums)  
+  
+}
+
+```
+
+
+Using the previously defined function to set of bitcoin headlines...
+
+
+```{r, eval=FALSE}
+cleanbitagg <- aggregatescore(bitdata,"Bitcoin")
+```
+
+When we plot with a dataset cleaned for the chracter string bitcoin in the headlines we find that most coverage is positive when we add the score for each date. 
+
+```{r, eval=FALSE}
+library(ggplot2)
+ggplot(cleanbitagg) + geom_point(aes(x=date,y=sum, colour = sum <0)) +
+  scale_colour_manual(name = 'Sum < 0', values = setNames(c('red','green'),c(T, F))) +
+  xlab('date') + ylab('score of date')
+```
+
+In the previous plot I see that there are a number of "good news days" for bitcoin, particularly in 2014.
+
+Let me pull the dates of that have a score larger than 5, and see what they have in common. I assembled a function to do just that.
+
+```{r}
+
+topheadline <- function(analyze,word, condition) {
+#Function to pull filters table to include headlines from dates with that have a score within a specified range
+#  
+#  
+#  
+#  
+    
+library(stringr)
+library(dplyr)
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+table <- clean %>%
+  group_by(date) %>%
+  summarise (n = n())
+
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
+
+  
+dates <- subset(sums, eval(parse(text=condition)), 
+select=c(date))  
+
+complete <- merge(dates,clean,by = "date")
+
+return(complete)
+
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
