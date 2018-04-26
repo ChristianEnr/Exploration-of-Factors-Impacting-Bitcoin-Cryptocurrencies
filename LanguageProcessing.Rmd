@@ -10,6 +10,7 @@ Documentation available at https://cran.r-project.org/web/packages/rtimes/index.
 
 
 ```{r, eval=FALSE}
+library(rtimes)
 Sys.setenv(NYTIMES_AS_KEY = "b4969dfbe67548568bf022335e4bd5fb")
 ```
 
@@ -268,10 +269,12 @@ Let me pull the dates of that have a score larger than 5, and see what they have
 
 topheadline <- function(analyze,word, condition) {
 #Function to pull filters table to include headlines from dates with that have a score within a specified range
-#  
-#  
-#  
-#  
+#Args:  
+#Analyze -Dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
+#Word - Character string to filter headlines by   
+#Condition -  Condition to be met concerning dates that have a aggregate score above a certain integer ex: "sum > 4" 
+#Returns:  
+#complete - Return  
     
 library(stringr)
 library(dplyr)
@@ -302,6 +305,271 @@ return(complete)
 ```
 
 
+
+```{r, eval=FALSE}
+topheadline<- topheadline(bitdata,"Bitcoin","sum > 5")
+```
+
+
+I notice when I set the condition to a high number, I get identical results, causing some of the outliers in my data. I then decide to alter the sentimentoutput to only generate unique headlines.    
+```{r}
+View(topheadline)
+```
+
+
+```{r}
+sentimentoutputunique <- function(dataNYT)  {
+#Generates data frame of NYT headlines and binary sentiment analysis results (positive/negative) from the following dictionaries: General Inquirer(Harvard-IV), Loughran-McDonald financial dictionary, and QDAP (polarity words from qdap package).   
+
+#Also adds a variable called "score" where the results of the dictionaries are converted to a numeric factor (1="positive" or -1="negative") and added together to form an aggregate score
+  
+#Identical to previous sentimentoutput function except only returns unique headlines  
+  
+#Arg:
+#dataNYT- dataframe genreated from scrapping with rtimes package 
+
+#Return
+#analysis- dataframe with Score(Factor),GI(Factor),LM(Factor),QDAP(Factor),Headline(Factor),Date(Date)  
+  
+library(rvest)
+library(SentimentAnalysis)
+library(stringr)
+library(dplyr)
+library(tm)
+
+data <-  dataNYT$data   
+
+headlines <- data$headline.main
+
+headlinecorpus <- Corpus(VectorSource(headlines))
+
+headlineclean <- tm_cleaner(headlinecorpus)
+
+sentimentnum <- analyzeSentiment(headlineclean)
+
+GI <-convertToBinaryResponse(sentimentnum$SentimentGI)
+LM <-convertToBinaryResponse(sentimentnum$SentimentLM)
+QDAP <-convertToBinaryResponse(sentimentnum$SentimentQDAP)
+
+headlineoriginal <- factor(data$headline.main)
+
+GI_num <- ifelse(GI =="positive",1,-1) 
+LM_num <- ifelse(LM =="positive",1,-1) 
+QDAP_num <- ifelse(QDAP =="positive",1,-1) 
+
+analysis <- data.frame(Score=factor(GI_num + LM_num + QDAP_num),
+  GI=factor(GI),
+  LM=factor(LM),
+  QDAP=factor(QDAP),
+  Headline=factor(data$headline.main),
+  date=as.Date(data$pub_date),
+  stringsAsFactors=FALSE)
+
+analysis2 <- unique(analysis)
+
+return(analysis2)
+
+}
+```
+
+Test of the function reduces the total amount of observations from 1153 to 1143. This suggests that the few duplicates that I did see when sorting with the topheadline function with argument "sum > 4", are what contributed to the outliers seen.
+
+```{r, eval=FALSE}
+bitdata <- sentimentoutputunique(bit)
+```
+
+
+
+Revisiting the previous sentimentoutput funtion, it will be useful to take a look at an apporch that does not reduce the sentiment analysis to a binary. 
+
+The convert to binary function looks at sentiment(dictionary) (i.e. "sentimentQDAP") vaules to make the jugement on if to count a headline as positive or negative. The sentiment vaules themselves are a sum of the positive and negative dictionary vaules (i.e. PositivityGI, NegativityGI) 
+
+So instead of recoding, why not just add the sentiment sum, allowing for nuance that retaining the continuous scale offers.
+
+```{r}
+sentimentoutputcont <- function(dataNYT)  {
+#Generates data frame of NYT headlines and binary sentiment analysis results (positive/negative) from the following dictionaries: General Inquirer(Harvard-IV), Loughran-McDonald financial dictionary, and QDAP (polarity words from qdap package).   
+
+#Also adds a variable called "score" where the results of the Sentiment dictionary vaules are added together to form an aggregate score.
+  
+#Identical to previous sentimentoutput function except only returns unique headlines  
+  
+#Arg:
+#dataNYT- dataframe genreated from scrapping with rtimes package 
+
+#Return
+#analysis- dataframe with Score(Factor),GI(Factor),LM(Factor),QDAP(Factor),Headline(Factor),Date(Date)   
+  
+library(rvest)
+library(SentimentAnalysis)
+library(stringr)
+library(dplyr)
+library(tm)
+
+data <-  dataNYT$data   
+
+headlines <- data$headline.main
+
+headlinecorpus <- Corpus(VectorSource(headlines))
+
+headlineclean <- tm_cleaner(headlinecorpus)
+
+sentimentnum <- analyzeSentiment(headlineclean)
+
+GI <-(sentimentnum$SentimentGI)
+LM <-(sentimentnum$SentimentLM)
+QDAP <-(sentimentnum$SentimentQDAP)
+
+headlineoriginal <- factor(data$headline.main)
+
+analysis <- data.frame(Score=as.numeric(GI + LM + QDAP),
+  GI=as.numeric(GI),
+  LM=as.numeric(LM),
+  QDAP=as.numeric(QDAP),
+  Headline=factor(data$headline.main),
+  date=as.Date(data$pub_date),
+  stringsAsFactors=FALSE)
+
+analysis2 <- unique(analysis)
+
+return(analysis2) 
+
+}
+```
+
+
+```{r}
+bitdata2 <- sentimentoutputcont(bit) 
+```
+
+
+```{r}
+aggnon <- aggregatescore(bitdata2,"Bitcoin")
+```
+
+When score is binary (sentimentoutputunique)
+
+```{r}
+library(ggplot2)
+ggplot(cleanbitagg) + geom_point(aes(x=date,y=sum, colour = sum <0)) +
+  scale_colour_manual(name = 'Sum < 0', values = setNames(c('red','green'),c(T, F))) +
+  xlab('date') + ylab('score of date')
+```
+
+When score is nonbinary (sentimentoutputcont)
+```{r}
+library(ggplot2)
+ggplot(aggnon) + geom_point(aes(x=date,y=sum, colour = sum <0)) +
+  scale_colour_manual(name = 'Sum < 0', values = setNames(c('red','green'),c(T, F))) +
+  xlab('date') + ylab('score of date')
+```
+
+
+Using the continuous ratings, I find more nuance in the headline ratings. I decide that I have now refined my headline data, for more precise sentiment analysis.
+
+
+I decide that functions to create word clouds would be a easy way to look at the frequency of words that appear in the headlines and find what issues appear to drive days with high headline frequency and/or headlines that score on the exterme ends of the sentiment analysis.  
+
+```{r}
+wordc <- function(analyze,word,condition,y) {
+#Function to generate word cloud from dataframe generated from aformentioned sentimentoutput functions. 
+#
+#Args:
+#Analyze -Dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
+#  
+#Word - Character string to filter headlines by  
+#  
+#Condition -  Condition to be met concerning dates that have a aggregate score above a certain integer ex: "sum > 4" 
+#  
+#y - Maximum number of words to be plotted. least frequent terms dropped
+# 
+#Returns:  
+#Wordcloud Plot   
+#  
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(stringr)
+library(dplyr)
+library(SnowballC)
+
+clean <- analyze %>%
+  filter(str_detect(Headline, word))
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
+
+  
+dates <- subset(sums,eval(parse(text=condition)), 
+select=c(date))  
+
+complete <- merge(dates,clean,by = "date")
+
+Corpus <- Corpus(VectorSource(complete$Headline))
+
+
+wordcloud(Corpus, max.words = y, random.order = FALSE)
+
+}
+
+```
+
+```{r}
+wordc(bitdata,"Bitcoin","sum > 3",100)
+```
+
+
+For comparisons sake, I decide to create the word cloud function without a string filter for the headline, wondering what I would get if I did not filter only for headlines containing bitcoin.
+
+```{r}
+wordcnofilter <- function(analyze,condition,y) {
+#Function to generate word cloud from dataframe generated from aformentioned sentimentoutput functions. 
+#
+#Args:
+#Analyze -Dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
+#  
+#Condition -  Condition to be met concerning dates that have a aggregate score above a certain integer ex: "sum > 4" 
+#  
+#y - Maximum number of words to be plotted. least frequent terms dropped
+# 
+#Returns:  
+#Wordcloud Plot   
+#    
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(stringr)
+library(dplyr)
+library(SnowballC)
+
+clean <- analyze 
+
+clean$Score <- as.numeric(as.character(clean$Score))
+
+sums <- clean %>%
+           group_by(date) %>%
+           summarise(sum = sum(Score))
+
+  
+dates <- subset(sums,eval(parse(text=condition)), 
+select=c(date))  
+
+complete <- merge(dates,clean,by = "date")
+
+Corpus <- Corpus(VectorSource(complete$Headline))
+
+
+wordcloud(Corpus, max.words = y, random.order = FALSE)
+
+}
+```
+
+```{r}
+wordcnofilter(bitdata,"sum > 0",100)
+```
 
 
 
