@@ -1,0 +1,148 @@
+---
+title: "ForumWebScrapper"
+output: html_document
+---
+Hoping to get a sense of the discussion about bitcoin, I develop a web scraping tool to scrape text from HTML documents. 
+
+```{r}
+
+
+parse <- function(url,Raw=TRUE) {
+#  
+# 
+#  
+#
+#
+#  
+library(rvest)
+library(SentimentAnalysis)
+library(rvest)
+library(stringr)
+library(tm)
+    
+  scraping <- read_html(url)
+  
+  p_text <- scraping %>%
+    html_nodes("a") %>%
+    html_text()
+  
+  cor <- Corpus(VectorSource(clean))
+  
+  text <- tm_cleaner(cor)
+  
+  sentiment <- analyzeSentiment(text)
+
+  sentiment <- convertToBinaryResponse(sentiment$SentimentQDAP)
+  
+  text <- lapply(text, '[[', 1) 
+  text<- unlist(text, recursive = TRUE, use.names = TRUE)
+  
+  df_true <- data.frame(
+    Score=factor(sentiment), 
+    Text=factor(clean), 
+    stringsAsFactors=FALSE) 
+  
+  df_false <- data.frame(
+    Score=factor(sentiment), 
+    Text=factor(text), 
+    stringsAsFactors=FALSE) 
+
+if (Raw==TRUE) return(df_true)
+if (Raw==FALSE) return(df_false)  
+  
+}
+
+
+```
+
+```{r}
+result <- parse("https://bitcointalk.org/index.php?board=1.0", TRUE)
+```
+
+
+web scraping for bitcoinforums.org
+
+```{r}
+
+bitcoinforums <- function(url,time,start)
+  
+{
+ #time is 1:5
+  #url is "https://bitcointalk.org/index.php?board=1.0"  of first page
+ #start is number at end of url
+scraping <- read_html(url)
+  
+  p_text <- scraping %>%
+    html_nodes("span") %>%
+    html_text()
+  
+  # clean first few rows and last three that have text from mods that isn't relevant
+    
+  p_text <- p_text[12:( length(p_text) - 3 )]
+  p_text3 <- p_text
+  
+ for (i in time) {
+   
+   
+   
+  page <- (start + (.40)* i )  
+  url <- paste0("https://bitcointalk.org/index.php?board=", page)
+  
+     
+     
+  scrape <- read_html(url)  
+    
+  
+  
+  p_text2 <- scrape %>%
+    html_nodes("span") %>%
+    html_text()
+  
+  
+ 
+
+  p_text3 <- dplyr::union(p_text3,p_text2)  
+  
+ }
+
+return(p_text3)
+  
+}
+ 
+```
+
+
+
+
+```{r}
+marketdiscuss<- bitcoinforums("https://bitcointalk.org/index.php?board=5.0",1:10,5.0)
+
+```
+
+
+use this code to clean text files
+
+
+```{r}
+
+  cor <- Corpus(VectorSource(clean))
+  
+  text <- tm_cleaner(cor)
+  
+  sentiment <- analyzeSentiment(text)
+
+  sentiment <- convertToBinaryResponse(sentiment$SentimentQDAP)
+  
+  text <- lapply(text, '[[', 1) 
+  text<- unlist(text, recursive = TRUE, use.names = TRUE)
+  
+  df_true <- data.frame(
+    Score=factor(sentiment), 
+    Text=factor(clean), 
+    stringsAsFactors=FALSE) 
+  
+
+View(p_text)
+```
+
+

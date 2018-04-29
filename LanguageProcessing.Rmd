@@ -17,14 +17,14 @@ Sys.setenv(NYTIMES_AS_KEY = "b4969dfbe67548568bf022335e4bd5fb")
 
 I first used the API to generate all headlines with the keyword "bitcoin" from January of 2010-April of 2018. 
 
-```{r}
+```{r, eval=FALSE}
 bit <- as_search(q="bitcoin", begin_date = "20100101", end_date = '20180401', all_results = TRUE)  
 ```
 
 
 I first used the API to generate all headlines with the keyword "cryptocurrency" from January of 2010-April of 2018. 
 
-```{r}
+```{r,eval=FALSE}
 crypt <- as_search(q="cryptocurrency", begin_date = "20100101", end_date = '20180401', all_results = TRUE) 
 ```
 
@@ -68,7 +68,7 @@ tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
 
 I developed the following function to easily replicate the sentiment analysis process.
 
-```{r, eval=FALSE}
+```{r}
 sentimentoutputbi <- function(dataNYT)  {
 #Generates data frame of NYT headlines and binary sentiment analysis results (positive/negative) from the following dictionaries: General Inquirer(Harvard-IV), Loughran-McDonald financial dictionary, and QDAP (polarity words from qdap package).   
 
@@ -123,7 +123,7 @@ return(analysis)
 
 Taking the dataframes generated from query to the Rtimes package and run them through the sentiment analysis function that I just defined.
 
-```{r , eval=FALSE}
+```{r}
 bitdata <- sentimentoutputbi(bit)
 
 cryptdata <- sentimentoutputbi(crypt)
@@ -139,7 +139,7 @@ View(cryptdata)
 ```
 
 
-```{r , eval=FALSE}
+```{r}
 
 library(stringr)
 library(dplyr)
@@ -152,17 +152,17 @@ cleancrypt <- cryptdata %>%
 
 Graph of Cleanbit (Score of Dataset that concerns headlines that mention bitcoin)
 
-```{r , eval=FALSE}
+```{r }
 library(ggplot2)
 ggplot(cleanbit) + 
-  geom_point(aes(x=date, y=Score)) 
+  geom_point(aes(x=date, y=Score)) + ggtitle("Sentiment Analysis Score", subtitle = "Headlines That Mention Bitcoin") 
 ```
 Graph of Cleancrypt (Score of Dataset that concerns headlines that mention bitcoin)
 
-```{r , eval=FALSE}
+```{r }
 library(ggplot2)
 ggplot(cleancrypt) + 
-  geom_point(aes(x=date, y=Score))
+  geom_point(aes(x=date, y=Score)) +  ggtitle("Sentiment Analysis Score", subtitle = "Headlines That Mention cryptocurrency") 
 ```
 
 There appears to be a high amount of "good" headlines concerning bitcoin (scores of three). This seems to be promising coorelating with the increse in market vaule, but I would like to create some kind of density graph so we can see where media coverage was at its highest.
@@ -171,7 +171,7 @@ When I filter headlines in the crypto dataset, based on the presence of the char
 
 Given how well known bitcoin is, I felt safe to proceed this way as "bitcoin" is often discussed as a proxy for cryptocurrencies in general.
 
-```{r , eval=FALSE}
+```{r }
 library(dplyr)
 table <- cleanbit %>%
   group_by(date) %>%
@@ -181,7 +181,7 @@ table <- cleanbit %>%
 
 Looking at the result, it appears that media intrest from the NYT in Bitcoin, peaked in 2014. This doesnt follow bitcoin prices closely, given the spike in 2017 of not just bitcoin but of other cryptocurrencies as well. 
 
-```{r , eval=FALSE}
+```{r }
 ggplot(table) + geom_density(aes(date,fill="red")) + ggtitle("NYT Interest in Bitcoin", subtitle = "Smoothed")
 ```
 
@@ -248,17 +248,17 @@ return(sums)
 Using the previously defined function to set of bitcoin headlines...
 
 
-```{r, eval=FALSE}
+```{r}
 cleanbitagg <- aggregatescore(bitdata,"Bitcoin")
 ```
 
 When we plot with a dataset cleaned for the chracter string bitcoin in the headlines we find that most coverage is positive when we add the score for each date. 
 
-```{r, eval=FALSE}
+```{r}
 library(ggplot2)
 ggplot(cleanbitagg) + geom_point(aes(x=date,y=sum, colour = sum <0)) +
   scale_colour_manual(name = 'Sum < 0', values = setNames(c('red','green'),c(T, F))) +
-  xlab('date') + ylab('score of date')
+  xlab('date') + ylab('score of date') + ggtitle("NYT Bitcoin Coverage", subtitle = "Aggregate Score per Day")
 ```
 
 In the previous plot I see that there are a number of "good news days" for bitcoin, particularly in 2014.
@@ -306,7 +306,7 @@ return(complete)
 
 
 
-```{r, eval=FALSE}
+```{r}
 topheadline<- topheadline(bitdata,"Bitcoin","sum > 5")
 ```
 
@@ -374,7 +374,7 @@ return(analysis2)
 
 Test of the function reduces the total amount of observations from 1153 to 1143. This suggests that the few duplicates that I did see when sorting with the topheadline function with argument "sum > 4", are what contributed to the outliers seen.
 
-```{r, eval=FALSE}
+```{r}
 bitdata <- sentimentoutputunique(bit)
 ```
 
@@ -392,7 +392,7 @@ sentimentoutputcont <- function(dataNYT)  {
 
 #Also adds a variable called "score" where the results of the Sentiment dictionary vaules are added together to form an aggregate score.
   
-#Identical to previous sentimentoutput function except only returns unique headlines  
+#Returns unique headlines  
   
 #Arg:
 #dataNYT- dataframe genreated from scrapping with rtimes package 
@@ -461,7 +461,7 @@ When score is nonbinary (sentimentoutputcont)
 library(ggplot2)
 ggplot(aggnon) + geom_point(aes(x=date,y=sum, colour = sum <0)) +
   scale_colour_manual(name = 'Sum < 0', values = setNames(c('red','green'),c(T, F))) +
-  xlab('date') + ylab('score of date')
+  xlab('date') + ylab('score of date') + ggtitle("NYT Bitcoin Coverage", subtitle = "Aggregate Score per Day (Continuous)")
 ```
 
 
@@ -518,7 +518,7 @@ wordcloud(Corpus, max.words = y, random.order = FALSE)
 ```
 
 ```{r}
-wordc(bitdata,"Bitcoin","sum > 3",100)
+wordc(bitdata2,"Bitcoin","sum > 0.3 ",100)
 ```
 
 
@@ -531,7 +531,7 @@ wordcnofilter <- function(analyze,condition,y) {
 #Args:
 #Analyze -Dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
 #  
-#Condition -  Condition to be met concerning dates that have a aggregate score above a certain integer ex: "sum > 4" 
+#Condition -  Condition to be met concerning dates that have a aggregate score above a #certain integer ex: "sum > 4" 
 #  
 #y - Maximum number of words to be plotted. least frequent terms dropped
 # 
@@ -572,6 +572,11 @@ wordcnofilter(bitdata,"sum > 0",100)
 ```
 
 
+```{r}
+bitsearch <- topheadline(bitdata2,"China", "sum > -5" )
+
+View(bitsearch)
+```
 
 
 
