@@ -1,0 +1,163 @@
+---
+title: "TwitterAPI"
+output: html_document
+---
+
+
+
+```{r,eval=FALSE}
+library(rtweet)
+
+
+## whatever name you assigned to your created app
+appname <- "rtweet_ce"
+
+## api key
+key <- "gaZ7oOlxa5M7e0ndqQRX4ZCXy"
+
+## api secret 
+secret <- "0gBA23qT2ZgW2rUHRCwcObH8ScjeC9uAugH2eQS7r8o6EodD6r"
+
+## create token named "twitter_token"
+twitter_token <- create_token(
+  app = appname,
+  consumer_key = key,
+  consumer_secret = secret)
+
+
+```
+
+
+Tweets from Coindesk.com
+
+```{r,eval=FALSE}
+coindesk <- get_timelines(c("coindesk"), n = 3200)
+```
+
+
+Tweets from Cointelegraph.com
+
+```{r,eval=FALSE}
+cointelegraph <- get_timelines(c("Cointelegraph"), n = 3200, include_rts=FALSE)
+```
+
+Tweets from Bitcoin Magazine
+
+```{r,eval=FALSE}
+BitcoinMagazine <- get_timelines(c("BitcoinMagazine"), n = 3200,include_rts=FALSE)
+```
+
+Tweets from The Merkle
+```{r,eval=FALSE}
+TheMerkle <- get_timelines(c("themerklenews"), n = 3200,include_rts=FALSE)
+```
+
+Tweets from CCN
+
+```{r,eval=FALSE}
+CCN <- get_timelines(c("CryptoCoinsNews"), n = 3200,include_rts=FALSE)
+```
+
+
+```{r}
+tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
+  # Cleans a corpus object of spaces,numbers,case,stop words, and punctuation
+  # Args:
+  # Corpus: Object to be cleaned
+  # stop=stopwords(""): define dictionary from which corrsponding stopwords will be pulled
+  # rm_num: True or False argument
+  #
+  #Returns: 
+  #Cleaned corpus object where number of rows is equal to input cprpus object.
+  #
+  require(tm)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, stop)
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(function(x) gsub("http\\w+", "", x)))
+  return(corpus)
+}
+```
+
+
+
+```{r}
+sentimentoutputconttweet <- function(data)  {
+#Generates data frame of tweet and continous sentiment analysis results (positive/negative) from the following dictionaries: General Inquirer(Harvard-IV), Loughran-McDonald financial dictionary, and QDAP (polarity words from qdap package).   
+
+#Also adds a variable called "score" where the results of the Sentiment dictionary vaules are added together to form an aggregate score. 
+  
+#Returns unique text  
+#  
+#Arg:
+#data- dataframe genreated from scrapping with rtimes package 
+
+#Return
+#analysis- dataframe with Score(Factor),GI(Factor),LM(Factor),QDAP(Factor),Headline(Factor),Date(Date),Variance   
+  
+library(rvest)
+library(SentimentAnalysis)
+library(stringr)
+library(dplyr)
+library(tm)
+library(textclean)
+
+test <- replace_non_ascii(data$text, remove.nonconverted = TRUE)  
+  
+tweets <- test
+
+tweetcorpus <- Corpus(VectorSource(tweets))
+
+tweetclean <- tm_cleaner(tweetcorpus)
+
+sentimentnum <- analyzeSentiment(tweetclean)
+
+GI <-(sentimentnum$SentimentGI)
+LM <-(sentimentnum$SentimentLM)
+QDAP <-(sentimentnum$SentimentQDAP)
+
+tweetoriginal <- factor(data$text)
+
+Score <- (GI + LM + QDAP)
+
+var <- 0.5* ((((GI)-(Score/3))^2) + (((LM)-(Score/3))^2) + (((QDAP)-(Score/3))^2))
+
+analysis <- data.frame(Score=as.numeric(GI + LM + QDAP),
+  GI=as.numeric(GI),
+  LM=as.numeric(LM),
+  QDAP=as.numeric(QDAP),
+  Headline=factor(data$text),
+  date=as.Date(data$created_at),
+  Var=as.numeric(var),
+  stringsAsFactors=FALSE)
+
+analysis2 <- unique(analysis)
+
+return(analysis2) 
+
+}
+```
+
+
+```{r}
+coindeskdata <- sentimentoutputconttweet(coindesk)
+```
+
+```{r}
+cointelegraphdata <- sentimentoutputconttweet(cointelegraph)
+```
+
+```{r}
+BitcoinMagazinedata <- sentimentoutputconttweet(BitcoinMagazine)
+```
+
+```{r}
+TheMerkledata <- sentimentoutputconttweet(TheMerkle)
+```
+
+```{r}
+CCNdata <- sentimentoutputconttweet(CCN)
+```
+

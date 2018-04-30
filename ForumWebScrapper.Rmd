@@ -4,72 +4,29 @@ output: html_document
 ---
 Hoping to get a sense of the discussion about bitcoin, I develop a web scraping tool to scrape text from HTML documents. 
 
+web scraping for bitcoinforums.org
+
 ```{r}
 
-
-parse <- function(url,Raw=TRUE) {
-#  
-# 
-#  
-#
-#
-#  
+bitcoinforums <- function(url,time,start) {
+#Function to webscrape bitcoinforums.org, usable for most generic html forums.  
+#Args:
+#Url- Web Url of forum page to begin scraping
+#Time - Amount of pages to scrape. (i.e. "1:5", asking the function to scrape 5 additional pages of same forum topic, for a total of 6 pages)
+#Start - Number at the end of the URL
+#Returns:
+#TextTopics - Data frame of forum topics 
+  
+ #time is 1:5
+  #url is "https://bitcointalk.org/index.php?board=1.0"  of first page
+ #start is number at end of url
 library(rvest)
 library(SentimentAnalysis)
 library(rvest)
 library(stringr)
 library(tm)
-    
-  scraping <- read_html(url)
+library(textclean)
   
-  p_text <- scraping %>%
-    html_nodes("a") %>%
-    html_text()
-  
-  cor <- Corpus(VectorSource(clean))
-  
-  text <- tm_cleaner(cor)
-  
-  sentiment <- analyzeSentiment(text)
-
-  sentiment <- convertToBinaryResponse(sentiment$SentimentQDAP)
-  
-  text <- lapply(text, '[[', 1) 
-  text<- unlist(text, recursive = TRUE, use.names = TRUE)
-  
-  df_true <- data.frame(
-    Score=factor(sentiment), 
-    Text=factor(clean), 
-    stringsAsFactors=FALSE) 
-  
-  df_false <- data.frame(
-    Score=factor(sentiment), 
-    Text=factor(text), 
-    stringsAsFactors=FALSE) 
-
-if (Raw==TRUE) return(df_true)
-if (Raw==FALSE) return(df_false)  
-  
-}
-
-
-```
-
-```{r}
-result <- parse("https://bitcointalk.org/index.php?board=1.0", TRUE)
-```
-
-
-web scraping for bitcoinforums.org
-
-```{r}
-
-bitcoinforums <- function(url,time,start)
-  
-{
- #time is 1:5
-  #url is "https://bitcointalk.org/index.php?board=1.0"  of first page
- #start is number at end of url
 scraping <- read_html(url)
   
   p_text <- scraping %>%
@@ -78,7 +35,7 @@ scraping <- read_html(url)
   
   # clean first few rows and last three that have text from mods that isn't relevant
     
-  p_text <- p_text[12:( length(p_text) - 3 )]
+  p_text <- p_text[1:( length(p_text) - 3 )]
   p_text3 <- p_text
   
  for (i in time) {
@@ -102,47 +59,113 @@ scraping <- read_html(url)
  
 
   p_text3 <- dplyr::union(p_text3,p_text2)  
+ 
   
  }
 
-return(p_text3)
-  
+Text <- data.frame(Topic=as.character(p_text3),stringsAsFactors = FALSE)    
+Text1 <-  Text %>% dplyr::filter(!(str_detect(Topic, "AM")))
+Text2 <- Text1 %>% dplyr::filter(!(str_detect(Topic, "PM")))
+TextTopics <- replace_non_ascii(Text2$Topic,remove.nonconverted = TRUE)
+
+return(TextTopics)
+
 }
  
 ```
 
 
 
+```{r}
+tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
+  # Cleans a corpus object of spaces,numbers,case,stop words, and punctuation
+  # Args:
+  # Corpus: Object to be cleaned
+  # stop=stopwords(""): define dictionary from which corrsponding stopwords will be pulled
+  # rm_num: True or False argument
+  #
+  #Returns: 
+  #Cleaned corpus object where number of rows is equal to input cprpus object.
+  #
+  require(tm)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, stop)
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(function(x) gsub("http\\w+", "", x)))
+  return(corpus)
+}
+```
+
+
 
 ```{r}
-marketdiscuss<- bitcoinforums("https://bitcointalk.org/index.php?board=5.0",1:10,5.0)
+wordcloudhtml <- function(forum,y) {
+
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(stringr)
+library(dplyr)
+library(SnowballC)
+
+
+
+Corpus <- Corpus(VectorSource(forum))
+
+Corpus <- tm_cleaner(Corpus)
+
+wordcloud(Corpus, max.words = y, random.order = FALSE)
+
+}
+
+```
+
+```{r}
+wordcloudforum(marketdiscuss,25)
 
 ```
 
 
-use this code to clean text files
+```{r}
+bitcoindiscussion<- bitcoinforums("https://bitcointalk.org/index.php?board=1.0",1:10,1.0)
+
+View(bitcoindiscussion)
+```
 
 
 ```{r}
+economics<- bitcoinforums("https://bitcointalk.org/index.php?board=7.0",1:3,7.0)
 
-  cor <- Corpus(VectorSource(clean))
-  
-  text <- tm_cleaner(cor)
-  
-  sentiment <- analyzeSentiment(text)
-
-  sentiment <- convertToBinaryResponse(sentiment$SentimentQDAP)
-  
-  text <- lapply(text, '[[', 1) 
-  text<- unlist(text, recursive = TRUE, use.names = TRUE)
-  
-  df_true <- data.frame(
-    Score=factor(sentiment), 
-    Text=factor(clean), 
-    stringsAsFactors=FALSE) 
-  
-
-View(p_text)
+View(economics)
 ```
+
+
+
+```{r}
+marketplace<- bitcoinforums("https://bitcointalk.org/index.php?board=5.0",1:10,5.0)
+
+View(marketplace)
+```
+
+
+```{r}
+speculation<- bitcoinforums("https://bitcointalk.org/index.php?board=57.0",1:10,57.0)
+
+View(marketdiscuss)
+```
+
+
+```{r}
+altcoin<- bitcoinforums("https://bitcointalk.org/index.php?board=67.0",1:10,67.0)
+
+View(altcoin)
+```
+
+
+
+
+
 
 
