@@ -41,7 +41,7 @@ Tweets from Cointelegraph.com
 cointelegraph <- get_timelines(c("Cointelegraph"), n = 3200, include_rts=FALSE)
 ```
 
-Tweets from Bitcoin Magazine
+Tweets from Bitcoin Magazine (threw out)
 
 ```{r,eval=FALSE}
 BitcoinMagazine <- get_timelines(c("BitcoinMagazine"), n = 3200,include_rts=FALSE)
@@ -57,6 +57,16 @@ Tweets from CCN
 ```{r,eval=FALSE}
 CCN <- get_timelines(c("CryptoCoinsNews"), n = 3200,include_rts=FALSE)
 ```
+
+Tweets from Bitcoin News
+
+```{r,eval=FALSE}
+BitcoinNews <- get_timelines(c("BTCTN"), n = 3200,include_rts=FALSE)
+```
+
+
+
+
 
 
 ```{r}
@@ -133,6 +143,8 @@ analysis <- data.frame(Score=as.numeric(GI + LM + QDAP),
   Var=as.numeric(var),
   stringsAsFactors=FALSE)
 
+analysis <- analysis[complete.cases(analysis), ]
+
 analysis2 <- unique(analysis)
 
 return(analysis2) 
@@ -143,21 +155,195 @@ return(analysis2)
 
 ```{r}
 coindeskdata <- sentimentoutputconttweet(coindesk)
+firsttweetplot(coindeskdata,"Coindesk")
 ```
+
+
+```{r}
+BitcoinNewsData <- sentimentoutputconttweet(BitcoinNews)
+firsttweetplot(BitcoinNewsData,"BitcoinNews")
+```
+
 
 ```{r}
 cointelegraphdata <- sentimentoutputconttweet(cointelegraph)
+firsttweetplot(cointelegraphdata,"Cointelegraph")
 ```
+
 
 ```{r}
 BitcoinMagazinedata <- sentimentoutputconttweet(BitcoinMagazine)
+firsttweetplot(BitcoinMagazinedata,"BitcoinMagazine")
 ```
+
 
 ```{r}
 TheMerkledata <- sentimentoutputconttweet(TheMerkle)
+firsttweetplot(TheMerkledata,"TheMerkle")
 ```
+
 
 ```{r}
 CCNdata <- sentimentoutputconttweet(CCN)
+firsttweetplot(CCNdata,"CCN")
 ```
+
+
+```{r}
+firsttweetplot <-function (data,title){
+library(plotly)
+library(ggplot2)
+ggplot(data) + geom_point(aes(x=date,y=Score, colour = Score <0)) +
+  scale_colour_manual(name = 'Score < 0', values = setNames(c('red','green'),c(T, F))) +
+  xlab('date') + ylab('score of date') + ggtitle(title, subtitle = ("Score"))  
+  
+}
+```
+
+
+```{r}
+alltweets   <-   rbind(CCNdata,TheMerkledata)
+alltweets   <-   rbind(alltweets,BitcoinNewsData)
+alltweets   <-   rbind(alltweets,cointelegraphdata)
+alltweets   <-   rbind(alltweets,coindeskdata)
+```
+
+
+```{r}
+firsttweetplot(alltweets,"alltweets")
+```
+
+
+```{r}
+aggregatescoretweet <- function(data) {
+#Function to aggregate the scores of all tweets from a particular date into one aggregate score per date
+  
+#Args:  
+#analyze -  dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
+#Word - Character string to filter headlines by   
+#Returns:  
+#sums - dataframe with Date and Corresponding Aggregate Score (sum).  
+    
+library(stringr)
+library(dplyr)
+
+sums <- data %>%
+           group_by(date) %>%
+           summarise(Score = sum(Score))
+
+return(sums)  
+  
+}
+
+```
+
+
+```{r}
+test <- aggregatescoretweet(alltweets)
+```
+
+```{r}
+firsttweetplot(test,test)
+```
+
+```{r}
+aggregatescoreproper <- function(data) {
+
+    
+library(stringr)
+library(dplyr)
+
+
+table <- data %>%
+  group_by(date) %>%
+  summarise (n = n())
+
+
+sums <- data %>%
+           group_by(date) %>%
+           summarise(Score = sum(Score)) 
+
+result <- data.frame(date=as.Date(table$date),
+                     Score=as.numeric((sums$Score)/(table$n)))
+                     
+                     
+
+
+return(result)  
+  
+}
+
+```
+
+```{r}
+alltweetsaggscoreavg <- aggregatescoreproper(alltweets)
+```
+
+
+```{r}
+firsttweetplot(alltweetsaggscoreavg,"Average Score Per Day") 
+```
+
+```{r}
+ggplot(alltweetsaggscoreavg,aes(x=date,y=Score)) + geom_point() + 
+  xlab('date') + ylab('score of date') + ggtitle("title", subtitle = ("Score")) + geom_smooth() 
+```
+
+
+
+Cluster
+
+```{r}
+market_price$`date` <- as.Date(market_price$`2017-05-01 00:00:00`)
+```
+
+```{r}
+ bitcoinpricesubset <- subset(market_price, date > "2017-09-06" & date < "2018-05-02")
+```
+
+```{r}
+tweetscoresubset <- subset(alltweetsaggscoreavg, date < "2018-05-01")
+```
+
+
+```{r}
+cluster <- merge(bitcoinpricesubset,tweetscoresubset, by= "date")
+
+cluster$`2017-05-01 00:00:00` <- NULL
+cluster$date <- NULL
+cluster$Bitcoin <- cluster$`1417.1728125`
+cluster$`1417.1728125` <- NULL
+```
+
+
+
+```{r}
+ggplot(cluster) + 
+  geom_point(aes(x = Score, y =Bitcoin))
+```
+
+
+```{r}
+ggplot(cluster, aes(Date)) + 
+  geom_line(aes(y = Score, colour = "Score")) + 
+  geom_line(aes(y = Bitcoin/100000, colour = "Bitcoin"))
+```
+
+```{r}
+t.test(cluster$Bitcoin,cluster$Score)
+```
+
+
+
+
+```{r}
+library(plotly)
+
+p <- firsttweetplot(alltweetsaggscoreavg,"Average Score Per Day")
+p <- ggplotly(p)
+
+```
+
+
+
 
