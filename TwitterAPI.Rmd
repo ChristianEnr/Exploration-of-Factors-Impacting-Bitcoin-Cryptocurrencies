@@ -2,8 +2,7 @@
 title: "TwitterAPI"
 output: html_document
 ---
-
-
+I decided to use the rTweet package to scrape news organizations thatreport on the subject of cryptocurrencies
 
 ```{r,eval=FALSE}
 library(rtweet)
@@ -34,18 +33,12 @@ Tweets from Coindesk.com
 coindesk <- get_timelines(c("coindesk"), n = 3200)
 ```
 
-
 Tweets from Cointelegraph.com
 
 ```{r,eval=FALSE}
 cointelegraph <- get_timelines(c("Cointelegraph"), n = 3200, include_rts=FALSE)
 ```
 
-Tweets from Bitcoin Magazine (threw out)
-
-```{r,eval=FALSE}
-BitcoinMagazine <- get_timelines(c("BitcoinMagazine"), n = 3200,include_rts=FALSE)
-```
 
 Tweets from The Merkle
 ```{r,eval=FALSE}
@@ -63,10 +56,6 @@ Tweets from Bitcoin News
 ```{r,eval=FALSE}
 BitcoinNews <- get_timelines(c("BTCTN"), n = 3200,include_rts=FALSE)
 ```
-
-
-
-
 
 
 ```{r}
@@ -96,10 +85,12 @@ tm_cleaner <- function(corpus, stop=stopwords("en"), rm_num=TRUE) {
 ```{r}
 sentimentoutputconttweet <- function(data)  {
 #Generates data frame of tweet and continous sentiment analysis results (positive/negative) from the following dictionaries: General Inquirer(Harvard-IV), Loughran-McDonald financial dictionary, and QDAP (polarity words from qdap package).   
-
-#Also adds a variable called "score" where the results of the Sentiment dictionary vaules are added together to form an aggregate score. 
-  
-#Returns unique text  
+#  
+#Adds a variable called "score" where the results of the Sentiment dictionary vaules are added together to form an aggregate score. 
+#  
+#Returns unique rows, eliminating identical tweets  
+#  
+#Creates variable called "var", a calculation of the varience of the sentiment analysis ratings.   
 #  
 #Arg:
 #data- dataframe genreated from scrapping with rtimes package 
@@ -154,6 +145,24 @@ return(analysis2)
 
 
 ```{r}
+firsttweetplot <-function (data,title){
+#Function to create visually appealing plot of sentiment scores of each tweet after passing dataset generated from rtweet.   
+#  
+#Args:  
+#Data - Dataset generated from rtweet package (dataframe)  
+#title- Title of Plot (character)   
+library(plotly)
+library(ggplot2)
+ggplot(data) + geom_point(aes(x=date,y=Score, colour = Score <0)) +
+  scale_colour_manual(name = 'Score < 0', values = setNames(c('red','green'),c(T, F))) +
+  xlab('date') + ylab('score of date') + ggtitle(title, subtitle = ("Score"))  
+  
+}
+```
+
+Plots of the datasets after sentiment analysis
+
+```{r}
 coindeskdata <- sentimentoutputconttweet(coindesk)
 firsttweetplot(coindeskdata,"Coindesk")
 ```
@@ -189,40 +198,25 @@ firsttweetplot(CCNdata,"CCN")
 ```
 
 
-```{r}
-firsttweetplot <-function (data,title){
-library(plotly)
-library(ggplot2)
-ggplot(data) + geom_point(aes(x=date,y=Score, colour = Score <0)) +
-  scale_colour_manual(name = 'Score < 0', values = setNames(c('red','green'),c(T, F))) +
-  xlab('date') + ylab('score of date') + ggtitle(title, subtitle = ("Score"))  
-  
-}
-```
-
+Merging all datasets into one
 
 ```{r}
 alltweets   <-   rbind(CCNdata,TheMerkledata)
 alltweets   <-   rbind(alltweets,BitcoinNewsData)
 alltweets   <-   rbind(alltweets,cointelegraphdata)
 alltweets   <-   rbind(alltweets,coindeskdata)
-```
-
-
-```{r}
 firsttweetplot(alltweets,"alltweets")
 ```
 
 
 ```{r}
 aggregatescoretweet <- function(data) {
-#Function to aggregate the scores of all tweets from a particular date into one aggregate score per date
+#Function to aggregate the sentiment scores of all tweets from a particular date into one aggregate score per date
   
 #Args:  
-#analyze -  dataframe with Score,GI,LM,QDAP,Headline,Date [Output from Previously Defined SentimentAnalysis function]
-#Word - Character string to filter headlines by   
+#data -  dataframe with Score,GI,LM,QDAP,Headline,Date (Dataframe)
 #Returns:  
-#sums - dataframe with Date and Corresponding Aggregate Score (sum).  
+#sums - dataframe with Date and Corresponding Aggregate Score (Dataframe)  
     
 library(stringr)
 library(dplyr)
@@ -246,10 +240,17 @@ test <- aggregatescoretweet(alltweets)
 firsttweetplot(test,test)
 ```
 
+I recognize that this data might not be ideal since the number of tweets in a day can run out the aggregate score. So I make a function that rectifies this by averaging the aggregate score by the amount of tweets that contribute to that score.
+
 ```{r}
 aggregatescoreproper <- function(data) {
-
-    
+#Function to aggregate the sentiment scores of all tweets from a particular date into one aggregate score per date and average the aggregate score by the amount of tweets that contribute to that score.
+#Args:  
+#data -  dataframe with Score,GI,LM,QDAP,Headline,Date (Dataframe)
+#Returns:  
+#sums - dataframe with Date and Corresponding Average Aggregate Score (Dataframe)   
+#
+#    
 library(stringr)
 library(dplyr)
 
@@ -265,9 +266,6 @@ sums <- data %>%
 
 result <- data.frame(date=as.Date(table$date),
                      Score=as.numeric((sums$Score)/(table$n)))
-                     
-                     
-
 
 return(result)  
   
@@ -277,72 +275,179 @@ return(result)
 
 ```{r}
 alltweetsaggscoreavg <- aggregatescoreproper(alltweets)
-```
-
-
-```{r}
 firsttweetplot(alltweetsaggscoreavg,"Average Score Per Day") 
 ```
+-------------------------------------------------------------------------------------------
+
+Cluster Analysis
+
+I decided to move to compare the sentiment analysis scores that I have generated with cryptocurrency market closing vaules. I first work to merge the market data with the sentiment analysis data that I had collected.  
+
+First I will scrape cryptocurrency data using the Crypto package.
+Documentation about this package is avalible at https://cran.r-project.org/web/packages/crypto/index.html
+
+I scrape only the data from the date range that I have tweets for, 2017-09-07 to 2018-04-30. 
+
+```{r,eval=FALSE}
+library(crypto)
+
+will_i_get_rich <- getCoins(start_date = '20170907', end_date = '20180430')
+```
+
+Subset the dataframe generated from the crypto package that has top 15 cryptocurrencies into one dataframe containg a date column and 15 more columns that are named after their respective cryptocurrencies.
 
 ```{r}
-ggplot(alltweetsaggscoreavg,aes(x=date,y=Score)) + geom_point() + 
-  xlab('date') + ylab('score of date') + ggtitle("title", subtitle = ("Score")) + geom_smooth() 
+
+Bitcoin <- subset(will_i_get_rich,will_i_get_rich$ranknow == 1 )
+myvars <- c("date", "close")
+Bitcoin <- Bitcoin[myvars]
+Bitcoin$Bitcoin <- Bitcoin$close
+Bitcoin$close <- NULL
+
+Ethereum <- subset(will_i_get_rich,will_i_get_rich$ranknow == 2 )
+Ethereum <- Ethereum[myvars]
+Ethereum$Ethereum <- Ethereum$close
+Ethereum$close <- NULL
+
+Ripple <- subset(will_i_get_rich,will_i_get_rich$ranknow == 3 )
+Ripple <- Ripple[myvars]
+Ripple$Ripple <- Ripple$close
+Ripple$close <- NULL
+
+Bitcoin_Cash <- subset(will_i_get_rich,will_i_get_rich$ranknow == 4 )
+Bitcoin_Cash <- Bitcoin_Cash[myvars]
+Bitcoin_Cash$Bitcoin_Cash <- Bitcoin_Cash$close
+Bitcoin_Cash$close <- NULL
+
+EOS <- subset(will_i_get_rich,will_i_get_rich$ranknow == 5 )
+EOS <- EOS[myvars]
+EOS$EOS <- EOS$close
+EOS$close <- NULL
+
+Cardano <- subset(will_i_get_rich,will_i_get_rich$ranknow == 6 )
+Cardano <- Cardano[myvars]
+Cardano$Cardano <- Cardano$close
+Cardano$close <- NULL
+
+Stellar <- subset(will_i_get_rich,will_i_get_rich$ranknow == 7 )
+Stellar <- Stellar[myvars]
+Stellar$Stellar <- Stellar$close
+Stellar$close <- NULL
+
+Litecoin <- subset(will_i_get_rich,will_i_get_rich$ranknow == 8 )
+Litecoin <- Litecoin[myvars]
+Litecoin$Litecoin <- Litecoin$close
+Litecoin$close <- NULL
+
+TRON <- subset(will_i_get_rich,will_i_get_rich$ranknow == 9 )
+TRON <- TRON[myvars]
+TRON$TRON <- TRON$close
+TRON$close <- NULL
+
+NEO <- subset(will_i_get_rich,will_i_get_rich$ranknow == 10 )
+NEO<- NEO[myvars]
+NEO$NEO <- NEO$close
+NEO$close <- NULL
+
+IOTA <- subset(will_i_get_rich,will_i_get_rich$ranknow == 11 )
+IOTA <- IOTA[myvars]
+IOTA$IOTA <- IOTA$close
+IOTA$close <- NULL
+
+Monero <- subset(will_i_get_rich,will_i_get_rich$ranknow == 12 )
+Monero <- Monero[myvars]
+Monero$Monero <- Monero$close
+Monero$close <- NULL
+
+Dash <- subset(will_i_get_rich,will_i_get_rich$ranknow == 13 )
+Dash <- Dash[myvars]
+Dash$Dash <- Dash$close
+Dash$close <- NULL
+
+NEM <- subset(will_i_get_rich,will_i_get_rich$ranknow == 14 )
+NEM <- NEM[myvars]
+NEM$NEM <- NEM$close
+NEM$close <- NULL
+
+Tether <- subset(will_i_get_rich,will_i_get_rich$ranknow == 15 )
+Tether <- Tether[myvars]
+Tether$Tether <- Tether$close
+Tether$close <- NULL
+
+Data <- Reduce(function(x, y) merge(x, y, all=TRUE), list(tweetscoresubset, Bitcoin, Ethereum, Ripple,Bitcoin_Cash,EOS,Cardano,Stellar,Litecoin,TRON,NEO,IOTA,Monero,Dash,NEM,Tether))
+
+str(Data)
+```
+
+Create a dataset without date for correlation plot.
+
+```{r}
+datatest <- Data
+
+datatest$date <- NULL
+```
+
+Correlation plot. Remove the Cardano and TRON Cryptocurrencies as they disrupt the plot, they contain many NA vaules as they were created after the beginning of the date range I am working with.
+
+```{r}
+library(corrplot)
+datacorr <- datatest
+datacorr$Cardano <- NULL
+datacorr$TRON <- NULL
+numeric_cor <- cor(datacorr)
+corrplot(numeric_cor)
+
+```
+
+
+```{r}
+View(numeric_cor)
+```
+
+
+When repeating the previous analysis, but filtering varience to only include tweets that had a calculated varience below 0.01.  
+
+```{r}
+tweetsvar <- subset(alltweets, Var < 0.01)
+tweetsvar <- subset(tweetsvar, date < "2018-05-01")
+
+tweetsvar <- aggregatescoreproper(tweetsvar)
+
+Datavartest <- Reduce(function(x, y) merge(x, y, all=TRUE), list(tweetsvar, Bitcoin, Ethereum, Ripple,Bitcoin_Cash,EOS,Cardano,Stellar,Litecoin,TRON,NEO,IOTA,Monero,Dash,NEM,Tether))
+```
+
+
+```{r}
+datavar <- Datavartest
+
+datavar$date <- NULL
+
+library(corrplot)
+datacorrvar <- datavar
+datacorrvar$Cardano <- NULL
+datacorrvar$TRON <- NULL
+numeric_var <- cor(datacorrvar)
+corrplot(numeric_var)
+
+```
+
+```{r}
+c <- numeric_cor[1,]
+v <- numeric_var[1,]
+```
+
+```{r}
+c
+```
+
+
+```{r}
+v
 ```
 
 
 
-Cluster
 
-```{r}
-market_price$`date` <- as.Date(market_price$`2017-05-01 00:00:00`)
-```
-
-```{r}
- bitcoinpricesubset <- subset(market_price, date > "2017-09-06" & date < "2018-05-02")
-```
-
-```{r}
-tweetscoresubset <- subset(alltweetsaggscoreavg, date < "2018-05-01")
-```
-
-
-```{r}
-cluster <- merge(bitcoinpricesubset,tweetscoresubset, by= "date")
-
-cluster$`2017-05-01 00:00:00` <- NULL
-cluster$date <- NULL
-cluster$Bitcoin <- cluster$`1417.1728125`
-cluster$`1417.1728125` <- NULL
-```
-
-
-
-```{r}
-ggplot(cluster) + 
-  geom_point(aes(x = Score, y =Bitcoin))
-```
-
-
-```{r}
-ggplot(cluster, aes(Date)) + 
-  geom_line(aes(y = Score, colour = "Score")) + 
-  geom_line(aes(y = Bitcoin/100000, colour = "Bitcoin"))
-```
-
-```{r}
-t.test(cluster$Bitcoin,cluster$Score)
-```
-
-
-
-
-```{r}
-library(plotly)
-
-p <- firsttweetplot(alltweetsaggscoreavg,"Average Score Per Day")
-p <- ggplotly(p)
-
-```
 
 
 
