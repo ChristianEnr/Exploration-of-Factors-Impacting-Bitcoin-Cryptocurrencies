@@ -11,10 +11,7 @@ Documentation avalible at https://cran.r-project.org/web/packages/crypto/index.h
 install.packages("crypto")
 library(crypto)
 
-will_i_get_rich <- getCoins(start_date = '20170907', end_date = '20180502')
-
-# Retrieve crypto market history for specific coin
-will_i_get_rich_from <- getCoins("kin")
+will_i_get_rich <- getCoins()
 
 # Get list of coins and rank
 rich_list <- listCoins()

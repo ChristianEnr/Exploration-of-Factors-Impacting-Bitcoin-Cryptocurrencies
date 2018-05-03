@@ -227,10 +227,6 @@ library(dplyr)
 clean <- analyze %>%
   filter(str_detect(Headline, word))
 
-table <- clean %>%
-  group_by(date) %>%
-  summarise (n = n())
-
 
 clean$Score <- as.numeric(as.character(clean$Score))
 
@@ -280,11 +276,6 @@ library(stringr)
 library(dplyr)
 clean <- analyze %>%
   filter(str_detect(Headline, word))
-
-table <- clean %>%
-  group_by(date) %>%
-  summarise (n = n())
-
 
 clean$Score <- as.numeric(as.character(clean$Score))
 

@@ -11,7 +11,7 @@ web scraping for bitcoinforums.org
 bitcoinforums <- function(url,time,start) {
 #Function to webscrape bitcoinforums.org, usable for most generic html forums.  
 #Args:
-#Url- Web Url of forum page to begin scraping, save for number at end of URL, which will be used as start argument
+#Url- Web Url of forum page to begin scraping, 
 #Time - Amount of pages to scrape. (i.e. "1:5", asking the function to scrape 5 additional pages of same forum topic, for a total of 6 pages)
 #Start - Number at the end of the URL
 #Returns:
