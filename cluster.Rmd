@@ -5,24 +5,22 @@ output: html_document
 
 genreate multiple crytocurrncy data
 
-1. genreating data from the cryptor package
+The bulk of my data was derived from the CryptoR package. 
 
+Documentation avalible at https://cran.r-project.org/web/packages/crypto/index.html
 
-2. compare to bitcoin dataset from blockchain
+```{r, eval=FALSE}
+install.packages("crypto")
+library(crypto)
 
-```{r}
-library(readr)
-BTC_block <- read_csv("~/software/market-price (1).csv")
+will_i_get_rich <- getCoins()
+
+# Retrieve crypto market history for specific coin
+will_i_get_rich_from <- getCoins("kin")
+
+# Get list of coins and rank
+rich_list <- listCoins()
 ```
-
-3. compare to coindesk bitcoin prices
-
-```{r}
-library(readr)
-BTC_coindesk <- read_csv("~/software/coindesk-bpi-USD-close_data-2010-07-17_2018-04-23.csv")
-View(coindesk_bpi_USD_close_data_2010_07_17_2018_04_23)
-```
-
 
 
 for simplicity I plan to work from 2014 forward.only use top 15 rank
@@ -74,6 +72,14 @@ function to return decomposed time series data
 ```{r}
 
 tsplot <- function(coin,year1,day1,year2,day2,aorm) {
+#function to generate time series plot, using the decompose function.
+#Args
+#Coin-name of crypto, corresponds to "name" in dataframe generated from the crypto package.(character) 
+#year1-Start Year of Analysis
+#day1-Start date of Analysis, Julian Date
+#year2-End Year of Analysis
+#day2-End date of Analysis, Julian Date
+#aorm- additive or multiplicative method (character)  
 #example tsplot("Bitcoin",2014,1,2018,1,"additive")
 library(dplyr)  
 cyp <- filter(data, name == coin) 
@@ -99,7 +105,15 @@ tsplot("Bitcoin",2014,1,2018,1,"multiplicative")
 ```{r}
 
 stlplot <- function(coin,year1,day1,year2,day2) {
-  
+#function to generate time series plot, using the stl function.
+#Args
+#Coin-name of crypto, corresponds to "name" in dataframe generated from the crypto package.(character) 
+#year1-Start Year of Analysis
+#day1-Start date of Analysis, Julian Date
+#year2-End Year of Analysis
+#day2-End date of Analysis, Julian Date
+#aorm- additive or multiplicative method (character)  
+#example tsplot("Bitcoin",2014,1,2018,1,"additive")  
 cyp <- filter(data, name == coin) 
 cyp <-subset(cyp, select = c(close))
 ts = ts(cyp, start=c(year1,day1), end=c(year2,day2), frequency = 365)
@@ -126,6 +140,8 @@ stlplot("Bitcoin",2014,1,2018,112)
 See that there is seasonal variations peaking around december months. 
 
 Will peform stl function with number of transcations per day data from blockchain
+
+Data at https://blockchain.info/charts/n-transactions?timespan=all
 
 ```{r}
 library(readr)
