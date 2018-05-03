@@ -1,0 +1,169 @@
+---
+title: "cluster analysis"
+output: html_document
+---
+
+genreate multiple crytocurrncy data
+
+1. genreating data from the cryptor package
+
+
+2. compare to bitcoin dataset from blockchain
+
+```{r}
+library(readr)
+BTC_block <- read_csv("~/software/market-price (1).csv")
+```
+
+3. compare to coindesk bitcoin prices
+
+```{r}
+library(readr)
+BTC_coindesk <- read_csv("~/software/coindesk-bpi-USD-close_data-2010-07-17_2018-04-23.csv")
+View(coindesk_bpi_USD_close_data_2010_07_17_2018_04_23)
+```
+
+
+
+for simplicity I plan to work from 2014 forward.only use top 15 rank
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+will_i_get_rich$date <- as.Date(will_i_get_rich$date)
+
+data<- subset(will_i_get_rich, will_i_get_rich$date >= "2014-01-01")
+
+data <- subset(data,data$ranknow < 16)
+
+```
+
+
+generate plot of all data
+
+```{r}
+library(ggplot2)
+
+ggplot(data) + 
+  geom_line(aes(x=date, y=close,colour = name)) + ggtitle("Closing Price of Top 15 Cryptocurrencies", subtitle = "USD")
+
+```
+
+
+graph subset by rank
+
+```{r}
+ggplot(subset(data,ranknow == 1)) + 
+  geom_line(aes(x=date, y=close, colour = slug)) 
+
+```
+
+```{r}
+View(decompose)
+```
+
+```{r}
+ggplot(bitcoin) + 
+  geom_line(aes(x=date, y=close)) 
+```
+
+function to return decomposed time series data
+
+```{r}
+
+tsplot <- function(coin,year1,day1,year2,day2,aorm) {
+#example tsplot("Bitcoin",2014,1,2018,1,"additive")
+library(dplyr)  
+cyp <- filter(data, name == coin) 
+cyp <-subset(cyp, select = c(close))
+ts <-  ts(cyp, start=c(year1,day1), end=c(year2,day2), frequency=365)
+decompose = decompose(ts, aorm)
+
+
+
+plot(as.ts(decompose$seasonal))
+plot(as.ts(decompose$trend))
+plot(as.ts(decompose$random))
+plot(decompose)
+
+}
+```
+
+
+```{r}
+tsplot("Bitcoin",2014,1,2018,1,"multiplicative")
+```
+
+```{r}
+
+stlplot <- function(coin,year1,day1,year2,day2) {
+  
+cyp <- filter(data, name == coin) 
+cyp <-subset(cyp, select = c(close))
+ts = ts(cyp, start=c(year1,day1), end=c(year2,day2), frequency = 365)
+stl= stl(ts, "periodic")
+seasonal_stl   <- stl$time.series[,1]
+trend_stl      <- stl$time.series[,2]
+random_stl     <- stl$time.series[,3]
+ 
+plot(ts)
+plot(as.ts(seasonal_stl))
+plot(trend_stl)
+plot(random_stl)
+plot(stl)
+
+}
+
+
+```
+
+```{r}
+stlplot("Bitcoin",2014,1,2018,112)
+```
+
+See that there is seasonal variations peaking around december months. 
+
+Will peform stl function with number of transcations per day data from blockchain
+
+```{r}
+library(readr)
+bitcoin_transactions <- read_csv("~/software/n-transactions (1).csv")
+
+bitcoin_transactions$`2009-01-03 00:00:00` <- as.Date(bitcoin_transactions$`2009-01-03 00:00:00`, format="%Y-%m-%d")
+
+bitcoin_transactions <- subset(bitcoin_transactions, bitcoin_transactions$`2009-01-03 00:00:00` >= "2014-01-01")
+
+```
+
+
+code to graph
+```{r}
+stlblockchain <- function (data,year1,day1,year2,day2) {
+
+
+cyp <- data[,2]
+ts = ts(cyp, start=c(year1,day1), end=c(year2,day2), frequency = 183)
+stl= stl(ts, "periodic")
+seasonal_stl   <- stl$time.series[,1]
+trend_stl      <- stl$time.series[,2]
+random_stl     <- stl$time.series[,3]
+ 
+plot(ts)
+plot(as.ts(seasonal_stl))
+plot(trend_stl)
+plot(random_stl)
+plot(stl)
+
+}
+```
+
+
+```{r}
+stlblockchain(bitcoin_transactions,2014,1,2018,110)
+```
+
+
+
+
