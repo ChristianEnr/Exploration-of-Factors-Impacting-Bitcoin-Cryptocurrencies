@@ -8,9 +8,10 @@ The bulk of my data was derived from the CryptoR package.
 Documentation avalible at https://cran.r-project.org/web/packages/crypto/index.html
 
 ```{r, eval=FALSE}
+install.packages("crypto")
 library(crypto)
 
-will_i_get_rich <- getCoins(start_date = '20170907', end_date = '20180430')
+will_i_get_rich <- getCoins(start_date = '20170907', end_date = '20180502')
 
 # Retrieve crypto market history for specific coin
 will_i_get_rich_from <- getCoins("kin")

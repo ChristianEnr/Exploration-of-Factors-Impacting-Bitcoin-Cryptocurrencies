@@ -5,6 +5,7 @@ output: html_document
 I decided to use the rTweet package to scrape news organizations thatreport on the subject of cryptocurrencies
 
 ```{r,eval=FALSE}
+library(httpuv)
 library(rtweet)
 
 
@@ -105,6 +106,7 @@ library(dplyr)
 library(tm)
 library(textclean)
 
+
 test <- replace_non_ascii(data$text, remove.nonconverted = TRUE)  
   
 tweets <- test
@@ -151,11 +153,10 @@ firsttweetplot <-function (data,title){
 #Args:  
 #Data - Dataset generated from rtweet package (dataframe)  
 #title- Title of Plot (character)   
-library(plotly)
 library(ggplot2)
 ggplot(data) + geom_point(aes(x=date,y=Score, colour = Score <0)) +
   scale_colour_manual(name = 'Score < 0', values = setNames(c('red','green'),c(T, F))) +
-  xlab('date') + ylab('score of date') + ggtitle(title, subtitle = ("Score"))  
+  xlab('date') + ylab('Score of Date') + ggtitle(title, subtitle = ("Score"))  
   
 }
 ```
@@ -180,10 +181,6 @@ firsttweetplot(cointelegraphdata,"Cointelegraph")
 ```
 
 
-```{r}
-BitcoinMagazinedata <- sentimentoutputconttweet(BitcoinMagazine)
-firsttweetplot(BitcoinMagazinedata,"BitcoinMagazine")
-```
 
 
 ```{r}
@@ -205,7 +202,7 @@ alltweets   <-   rbind(CCNdata,TheMerkledata)
 alltweets   <-   rbind(alltweets,BitcoinNewsData)
 alltweets   <-   rbind(alltweets,cointelegraphdata)
 alltweets   <-   rbind(alltweets,coindeskdata)
-firsttweetplot(alltweets,"alltweets")
+firsttweetplot(alltweets,"All Tweets")
 ```
 
 
@@ -237,7 +234,7 @@ test <- aggregatescoretweet(alltweets)
 ```
 
 ```{r}
-firsttweetplot(test,test)
+firsttweetplot(test,"Aggregate Score of Date")
 ```
 
 I recognize that this data might not be ideal since the number of tweets in a day can run out the aggregate score. So I make a function that rectifies this by averaging the aggregate score by the amount of tweets that contribute to that score.
@@ -289,9 +286,10 @@ Documentation about this package is avalible at https://cran.r-project.org/web/p
 I scrape only the data from the date range that I have tweets for, 2017-09-07 to 2018-04-30. 
 
 ```{r,eval=FALSE}
+
 library(crypto)
 
-will_i_get_rich <- getCoins(start_date = '20170907', end_date = '20180430')
+will_i_get_rich <- getCoins(start_date = '20170911', end_date = '20180503')
 ```
 
 Subset the dataframe generated from the crypto package that has top 15 cryptocurrencies into one dataframe containg a date column and 15 more columns that are named after their respective cryptocurrencies.
@@ -329,30 +327,33 @@ Cardano <- Cardano[myvars]
 Cardano$Cardano <- Cardano$close
 Cardano$close <- NULL
 
-Stellar <- subset(will_i_get_rich,will_i_get_rich$ranknow == 7 )
-Stellar <- Stellar[myvars]
-Stellar$Stellar <- Stellar$close
-Stellar$close <- NULL
-
-Litecoin <- subset(will_i_get_rich,will_i_get_rich$ranknow == 8 )
+Litecoin <- subset(will_i_get_rich,will_i_get_rich$ranknow == 7 )
 Litecoin <- Litecoin[myvars]
 Litecoin$Litecoin <- Litecoin$close
 Litecoin$close <- NULL
 
-TRON <- subset(will_i_get_rich,will_i_get_rich$ranknow == 9 )
+Stellar <- subset(will_i_get_rich,will_i_get_rich$ranknow == 8 )
+Stellar <- Stellar[myvars]
+Stellar$Stellar <- Stellar$close
+Stellar$close <- NULL
+
+
+IOTA <- subset(will_i_get_rich,will_i_get_rich$ranknow == 9 )
+IOTA <- IOTA[myvars]
+IOTA$IOTA <- IOTA$close
+IOTA$close <- NULL
+
+
+TRON <- subset(will_i_get_rich,will_i_get_rich$ranknow == 10 )
 TRON <- TRON[myvars]
 TRON$TRON <- TRON$close
 TRON$close <- NULL
 
-NEO <- subset(will_i_get_rich,will_i_get_rich$ranknow == 10 )
+
+NEO <- subset(will_i_get_rich,will_i_get_rich$ranknow == 11 )
 NEO<- NEO[myvars]
 NEO$NEO <- NEO$close
 NEO$close <- NULL
-
-IOTA <- subset(will_i_get_rich,will_i_get_rich$ranknow == 11 )
-IOTA <- IOTA[myvars]
-IOTA$IOTA <- IOTA$close
-IOTA$close <- NULL
 
 Monero <- subset(will_i_get_rich,will_i_get_rich$ranknow == 12 )
 Monero <- Monero[myvars]
@@ -369,12 +370,15 @@ NEM <- NEM[myvars]
 NEM$NEM <- NEM$close
 NEM$close <- NULL
 
-Tether <- subset(will_i_get_rich,will_i_get_rich$ranknow == 15 )
-Tether <- Tether[myvars]
-Tether$Tether <- Tether$close
-Tether$close <- NULL
+VeChain <- subset(will_i_get_rich,will_i_get_rich$ranknow == 15 )
+VeChain <- VeChain[myvars]
+VeChain$VeChain <- VeChain$close
+VeChain$close <- NULL
 
-Data <- Reduce(function(x, y) merge(x, y, all=TRUE), list(tweetscoresubset, Bitcoin, Ethereum, Ripple,Bitcoin_Cash,EOS,Cardano,Stellar,Litecoin,TRON,NEO,IOTA,Monero,Dash,NEM,Tether))
+#subset so that tweets and cryptocurrency prices have identical dates
+tweetsubset <- subset(alltweetsaggscoreavg, date < "2018-05-03")
+
+Data <- Reduce(function(x, y) merge(x, y, all=TRUE), list(tweetsubset, Bitcoin, Ethereum, Ripple,Bitcoin_Cash,EOS,Cardano,Litecoin,Stellar,IOTA,TRON,NEO,Monero,Dash,NEM,VeChain))
 
 str(Data)
 ```
@@ -390,6 +394,7 @@ datatest$date <- NULL
 Correlation plot. Remove the Cardano and TRON Cryptocurrencies as they disrupt the plot, they contain many NA vaules as they were created after the beginning of the date range I am working with.
 
 ```{r}
+
 library(corrplot)
 datacorr <- datatest
 datacorr$Cardano <- NULL
@@ -405,18 +410,36 @@ View(numeric_cor)
 ```
 
 
+```{r}
+corrplot(numeric_cor,method="color")
+```
+
+
+```{r}
+p.mat <- cor.mtest(datacorr)
+View(p.mat)
+```
+
+
+```{r}
+corrplot(numeric_cor, method="color",
+         p.mat = p.mat, sig.level = 0.01)
+```
+
+
 When repeating the previous analysis, but filtering varience to only include tweets that had a calculated varience below 0.01.  
 
 ```{r}
 tweetsvar <- subset(alltweets, Var < 0.01)
-tweetsvar <- subset(tweetsvar, date < "2018-05-01")
+tweetsvar <- subset(tweetsvar, date < "2018-05-03")
 
 tweetsvar <- aggregatescoreproper(tweetsvar)
 
-Datavartest <- Reduce(function(x, y) merge(x, y, all=TRUE), list(tweetsvar, Bitcoin, Ethereum, Ripple,Bitcoin_Cash,EOS,Cardano,Stellar,Litecoin,TRON,NEO,IOTA,Monero,Dash,NEM,Tether))
+Datavartest <- Reduce(function(x, y) merge(x, y, all=TRUE), list(tweetsvar, Bitcoin, Ethereum, Ripple,Bitcoin_Cash,EOS,Cardano,Litecoin,Stellar,IOTA,TRON,NEO,Monero,Dash,NEM,VeChain))
+
 ```
 
-
+Elminating Date(not numeric) and Cardano/TRON due to missing vaules.
 ```{r}
 datavar <- Datavartest
 
@@ -429,22 +452,10 @@ datacorrvar$TRON <- NULL
 numeric_var <- cor(datacorrvar)
 corrplot(numeric_var)
 
+p.mat <- cor.mtest(datacorrvar)
+corrplot(numeric_var, method="color",
+         p.mat = p.mat, sig.level = 0.01)
 ```
-
-```{r}
-c <- numeric_cor[1,]
-v <- numeric_var[1,]
-```
-
-```{r}
-c
-```
-
-
-```{r}
-v
-```
-
 
 
 
