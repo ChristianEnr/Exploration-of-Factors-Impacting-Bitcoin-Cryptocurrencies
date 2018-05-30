@@ -10,13 +10,13 @@ library(rtweet)
 
 
 ## whatever name you assigned to your created app
-appname <- "rtweet_ce"
+appname <- "xxxxx"
 
 ## api key
-key <- "gaZ7oOlxa5M7e0ndqQRX4ZCXy"
+key <- "xxxxxxxxx"
 
 ## api secret 
-secret <- "0gBA23qT2ZgW2rUHRCwcObH8ScjeC9uAugH2eQS7r8o6EodD6r"
+secret <- "xxxxxxxx"
 
 ## create token named "twitter_token"
 twitter_token <- create_token(
