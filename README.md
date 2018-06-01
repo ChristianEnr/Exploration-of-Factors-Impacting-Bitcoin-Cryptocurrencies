@@ -6,12 +6,8 @@ Exploration of Factors Impacting Bitcoin/Cryptocurrencies
 This folder contains my final project for INFO 550 Software Engineering, a exploration of data relating to
 the Cyptocurrency phenomenon. The bulk of the project deals with sentiment analysis but also general clustering and trends.
 ------------------------------------------------------------------------------------------------
-Intent:
-
-To document my use of techniques learned in INFO 550 to explore and learn about cryptocurrencies.  
+The purpose of this project is to document my use of techniques learned in INFO 550 to explore and learn about cryptocurrencies.  
 ------------------------------------------------------------------------------------------------
-Software:
-
 All code is in R markdown files, coded using R programming language.
 ------------------------------------------------------------------------------------------------
 Contents:
